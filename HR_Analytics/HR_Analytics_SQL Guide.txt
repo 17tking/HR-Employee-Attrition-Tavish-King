@@ -1,0 +1,83 @@
+**Distinguising between Attrition and Non-Attrition**
+- employee survey from IBM
+- attrition (yes/no) along with information about that employee
+- understand factors that influence employee attrition so that HR can develop plans to minimize it
+- WONT be able to predict future attrition, BUT it can help in understanding what influences attrition
+- future steps would be to talk to the employee who left firsthand and/or take multiple surveys from the same employees
+	over the course of a year+ within the company.
+- Could generate new insights for the business on what influences attrition.
+- Take this information to the employees and discuss what they think and pair their insights with the models information
+- Allows company to reflect on their work conditions, bonuses, treatment of employees, etc...
+
+**Data**
+- imbalanced (more No than Yes for Attrition)
+	- use F1 score
+- some variables will be dropped in SQL due to irrelevance
+
+*SQL-analysis*
+Cleaning:
+- identify count of NULL values
+- Drop daily_rate, hourly_rate, monthly rate, distance_from_home, standard hours, employee_count (redundant), and standard hours
+- Convert Attrition and Overtime to boolean
+- Ensure numeric columns are numeric, categorical is categorical
+- calculate annual_income = monthly_income * 12
+
+
+EDA Questions to Answer?
+Count of Yes Attrition and No Attrition?
+Count of Business Travel, Department, Education Field, Gender, Job Role, Marital Status, Overtime?
+Range of Yearly Income?
+Describe data for Yes attrition?
+Describe Data for No attrition?
+
+
+*R-analysis*
+- bar graph visuals from EDA in SQL
+- histogram of numeric variables
+- Relevel categorical values
+- ensure data formatting (numeric, factor, etc...)
+- correlation matrix + corrplot (high corr threshhold? 0.80)
+- Run Logistic Regression in R
+	- weight the attrition var
+	- check multicollinearity (vif)
+- Confusion Matrix
+- Interpretation of Scores
+- Develop R markdown report
+
+*PowerBI-analysis*
+- Visualize in Power BI
+- Develop dashboard format with relevant KPIs and information
+
+**From Lucas Fischer on Kaggle:**
+Employee churn can be a sensitive topic in certain cases (for example, giving a raise to an employee based on the prediction a 
+ML model made, can be misinterpreted by other employees, or even you can be giving a raise to the wrong employee).
+
+Since there is no time-series in this dataset, all classification tasks, in the various and cool notebooks this dataset has, have been 
+to train a machine learning model on a portion of the employees and test it on the remaining, unseen, portion of employees. What 
+this tells you is that if the conclusion and assumptions you made generalize to unseen employees. Given this holds true you can 
+make conclusions about the entire population because you know they will be right in general.
+
+However, say X number of months pass and you want to re-predict who is going to churn or not. Your model won't be able to do 
+this because this is not what it was trained for. Your model was trained to distinguish between the two populations, churners and 
+non churners, given they are all in the same time-step. It was not trained to know if an employee will leave X months in the future,
+and it was not trained to generalize to other time-steps in the future.
+
+So be careful if you wantted to apply a model like this in your company. If you want to predict for the same employees but in 
+different times in the future, then the models you have in these notebooks woun't do. There is still interest however in being 
+able to distinguish the two populations as it gives you insight as to what makes them different!
+
+
+Remove:
+monthly_income
+job_level
+employee_number
+performance_rating
+percent_salary_hike
+total_working_years
+yrs_in_current_role
+yrs_with_curr_manager
+YearRange
+
+
+
+

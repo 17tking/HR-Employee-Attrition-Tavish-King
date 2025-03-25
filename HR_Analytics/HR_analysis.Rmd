@@ -1,0 +1,1576 @@
+---
+title: "HR-
+        Employee Attrition and Analysis"
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_depth: 2
+css: "styles.css"
+---
+
+<center>![](C:/Users/tavis/OneDrive/Desktop/Data_Analysis_Projects/SQL/HR_Analytics/EmployeeAttrition.png)</center>
+
+# **Introduction**
+
+Attrition refers to employees leaving an organization without the organization being able to immediately fill their vacancies. High rates of employee attrition often occur when key factors, such as inadequate compensation, poor work-life balance, ineffective management, lack of career advancement opportunities, and poor working conditions, are left <u>**unaddressed**</u>
+
+Understanding *who* leaves and *why* is crucial for improving workplace policies, reducing turnover, and minimizing the negative impact on productivity, culture, and financial performance. High attrition can lead to increased recruitment and training costs, loss of institutional knowledge, and burnout among remaining staff. Luckily, there are solutions. By effectively leveraging data-driven insights from employee surveys, exit interviews, and feedback, organizations/companies can identify root causes to employee attrition and implement targeted strategies to improve retention and create a healthier work environment.
+
+## Data Source
+
+<u>**🔗 to Dataset**</u>: [IBM HR Analytics Employee Attrition and Performance-Kaggle](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset/data)
+
+This is a fictional data set created by IBM data scientists. It includes the data of nearly 1500 employees and 35 variables. The dataset contains information on employee demographics, income, job satisfaction, job information, and whether or not the employee attrited.\
+<br>
+
+<details>
+
+<summary><strong><u>Click to View Dataset Variables and Definitions</u></strong></summary>
+
+| \# | Variable | Definition |
+|-------------------|----------------------|-------------------------------|
+| 1 | Age | Age of employee |
+| 2 | Gender | Employee's gender (male/female) |
+| 3 | Attrition | Whether employee left company (Yes/No) |
+| 4 | BusinessTravel | Frequency of travel (Rarely, Frequently, etc.) |
+| 5 | DailyRate | Daily salary rate (USD) |
+| 6 | Department | Department of employee (Sales, R&D, etc.) |
+| 7 | DistanceFromHome | Distance from home to work (miles) |
+| 8 | Education | Level of education achieved by employee (1.Below College, 2.College, etc.) |
+| 9 | EducationField | Employee's field of study |
+| 10 | EmployeeCount | N/A |
+| 11 | EmployeeNumber | Unique identifier for each employee |
+| 12 | EnvironmentSatisfaction | Employee satisfaction with working environment (1-4) |
+| 13 | HourlyRate | Hourly salary rate (USD) |
+| 14 | JobInvolvement | Level of involvement required for employee's job (1-4) |
+| 15 | JobLevel | Employee's level of work (1-5) |
+| 16 | JobRole | Employee's role in the organization (Sales exec., Lab Tech., etc.) |
+| 17 | JobSatisfaction | Satisfaction rating of the job (1-4) |
+| 18 | Marital Status | Employee's marital status (S, M, D) |
+| 19 | MonthlyIncome | Employee's monthly salary (\$) |
+| 20 | Monthly Rate | Monthly salary rate (USD) |
+| 21 | NumCompaniesWorked | \# of companies the employee worked for |
+| 22 | Over 18 | Whether or not the employee is 18 yrs old |
+| 23 | OverTime | Whether or not the employee works overtime (yes/no) |
+| 24 | PercentSalaryHike | Salary increase rate |
+| 25 | PerformanceRating | Performance rating of employee (1-4) |
+| 26 | RelationshipSatisfaction | Employee's satisfaction with personal relationships (1-4) |
+| 27 | StandardHours | Standard working hours for employees |
+| 28 | StockOptionLevel | Employee's stock option level |
+| 29 | TotalWorkingYears | Total \# of years the employee has worked |
+| 30 | TrainingTimesLastYear | \# of trainings the employee has taken |
+| 31 | WorkLifeBalance | Employee's perception of their work-life balance (1-4) |
+| 32 | YearsAtCompany | \# of years employee has been with current company |
+| 33 | YearsInCurrentRole | \# of years employee has been in current role |
+| 34 | YearsSinceLastPromoted | \# of years since last promotion |
+| 35 | YearsWithCurrManager | \# of years with current manager |
+
+</details>
+
+</br> <u>**Disclosure**</u>: This data is intended for research purposes and data practice. Models designed from this data are not designed to predict future attrition X number of months from now. The primary goal is research, data exploration, and inference, rather than developing a predictive model for future attrition. Typically, machine learning workflows involve splitting data into training and testing sets to evaluate how well a model generalizes. However, in this case, the objective is not to predict employee attrition a specific number of months from now but rather to understand the key factors associated with attrition and their relative importance.
+
+## Project Scope
+
+This analysis covers **4** key areas:
+
+### 1. [**Data Preparation (SQL & R)**](#1.)
+
+-   Using SQL and R to inspect, clean, and prepare the dataset for analysis
+
+### 2. [**Exploratory Data Analysis (SQL & R)**](#2.)
+
+-   Perform initial EDA in SQL with the string and binary variables\
+-   Create visualizations in R to uncover relationships in the data with the numeric, binary, and string variables
+
+### 3. [**Modeling and Analysis (R)**](#3.)
+
+#### **Logistic Regression**
+
+-   Applied generalized linear regression (logistic regression) to identify factors influencing employee attrition (binary outcome: stayed vs. quit)
+-   Checked model assumptions
+-   Constructed predictive probability plots to assess the variables individual contribution to attrition
+-   Examined odds ratios (ORs) to quantify how each factor affects the likelihood of an employee leaving
+-   Included demographic, job-related, and satisfaction-related variables to understand their impact
+
+#### **Model Evaluation**
+
+-   Using metrics such as **accuracy**, **Tjur's R^2^**, **Precision**, **Recall**, and the **F1-score** to evaluate how well our model performed and what can be done for future models.
+
+### 4. [**Conclusion and Company Insights**](#4.)
+
+-   Wrapping up the project with real-world, real-business strategies on the most influential factors from this analysis to help combat the negative impacts employee attrition can have on a company
+
+
+# 1. **Data Preparation (SQL & R)** {#1.}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RPostgres)  #to connect to SQL code
+library(DBI)        #connecting to SQL database
+```
+
+```{r SQL database, include=FALSE}
+# for myself
+con <- dbConnect(Postgres(),
+                 dbname = "HR_Analytics",
+                 host = "localhost",
+                 port = "5432",
+                 user = "postgres",
+                 password = "Ecclesiastes4:8")
+```
+
+### **Connect to SQL database with R**
+
+```{r Connecting to SQL database, eval=FALSE}
+# 1.) Install & load necessary packages
+library(RPostgres)  #to connect to SQL code
+library(DBI)        #connecting to SQL database
+
+# 2.) Enter database info
+# connection <- dbConnect(Postgres(),
+#                  dbname = "Name_Of_Your_Database",
+#                  host = "yourHost",
+#                  port = "####",
+#                  user = "insert_user",
+#                  password = "**********")
+```
+
+<u>Note</u>: I changed the name of variables by just putting underscores. Just for my own satisfaction. Over18 was removed before querying giving us 34 variables now.
+
+## Data Cleaning
+
+### **Step 1**: Load data into new table
+
+To begin the analysis, I first loaded the dataset into a new SQL table. This ensures data integrity, allows for efficient querying, and provides a clean workspace for further transformations and analysis.
+
+```{sql Creating New Table, connection = con}
+Drop Table if Exists hr_attrition_transformed;
+```
+
+```{sql Creating New Table2, connection=con}
+CREATE TABLE hr_attrition_transformed AS  --the new table for analysis in R and EDA.
+Select *
+From hr_attrition;
+--34 variables
+```
+
+### **Step 2**: Check data for typos/errors
+
+While it's best practice to check every variable for inconsistencies, I'll focus on a few key text-based variables to save time. This helps catch common issues like misspellings or inconsistent formatting.
+
+```{sql Check Data1, connection=con}
+Select Distinct(business_travel)
+From hr_attrition_transformed; --3 levels. No typos.
+```
+
+```{sql, Check Data2, connection=con}
+Select Distinct(gender)
+From hr_attrition_transformed; -- No typos
+```
+
+```{sql, Check Data3, connection=con}
+Select Distinct(department)
+From hr_attrition_transformed; --No typos
+```
+
+### **Step 3**: Identify *NULL* values in 'attrition' and 'employee_number'
+
+Missing values can impact analysis and model performance. Here, I check for NULL values in the 'attrition' and 'employee_number' columns to ensure data completeness and decide how to handle any gaps.
+
+```{sql, NULL values, connection=con}
+Select COUNT(*) as null_count
+From hr_attrition_transformed
+Where attrition is NULL OR employee_number is NULL;
+```
+
+### **Step 4**: Remove unnecessary columns
+
+I chose to remove these for their own specifc reasons. Either the information seemed irrelevant or I did not think it mattered to the overall analysis. Additionally:
+
+-   <u>Redundant Information</u>: Some columns may duplicate information already captured in other variables. Keeping both can lead to multicollinearity in regression models.
+
+-   <u>Irrelevant to the Objective</u>: If a column does not directly relate to predicting attrition or improving insights, removing it helps streamline the analysis.
+
+-   <u>Improved Model Performance</u>: Keeping only relevant features reduces computational cost and prevents overfitting in machine learning models.
+
+```{sql, Drop Columns, connection=con}
+Alter Table hr_attrition_transformed
+Drop Column daily_rate, --not useful; may vary
+Drop Column hourly_rate, --not useful; may vary
+Drop Column monthly_rate, --not useful; may vary
+Drop Column distance_from_home, --range is 1-29 miles
+Drop Column standard_hours, --nonsensical; same for all employees
+Drop Column employee_count; --nonsensical; every value is 1
+```
+
+### **Step 5**: Creating 'annual_income' variable to condense income info
+
+The data contains multiple salary-related columns. To simplify the analysis and avoid redundancy, I created a single 'annual_income' variable that combines relevant income information into one value. The CSV was then saved and exported to R for further cleaning to prepare for the regression analysis. (See Below)
+
+```{sql, Annual_income, connection=con}
+Alter Table hr_attrition_transformed
+Add Column annual_income INT;
+```
+
+```{sql, Annual_income2, connection=con}
+Update hr_attrition_transformed
+Set annual_income = (monthly_income * 12)/1000;
+```
+
+```{sql, Annual_income3, connection=con}
+Select annual_income
+From hr_attrition_transformed
+Limit 3;
+```
+
+### **Step 6**: Loading packages & dataset in R
+
+To begin my work in R, I load the necessary packages for data manipulation and visualization. I also import the dataset, making it ready for further processing and modeling. This step ensures that all required tools and data are available for the job ahead, including my analysis.
+
+```{r Packages, message=FALSE, warning=FALSE}
+# Load necessary packages
+library(tidyverse)     #for data wrangling and visualization
+library(knitr)         #for tables
+library(ggpubr)        #for plot designing
+library(scales)        #for plot designing
+library(corrplot)      #for correlation matrix
+library(plotly)        #for interactive plots
+library(reshape2)      #for plotting correlations
+library(caret)         #for model evaluation and balancing
+library(car)           #for checking multicollinearity
+library(broom)         #for tables
+library(performance)   #for model performance/evaluation
+library(randomForest)  #for variable importance
+library(vip)           #for graphing variable importance
+library(pROC)          #for ROC curve and AUC
+options(scipen = 999) 
+```
+
+```{r Load In Data, message=FALSE, warning=FALSE}
+# Load in Data
+hr_attrition_transformed <- read_csv("hr_attrition_transformed.csv")
+```
+
+### **Step 7**: Viewing structure of dataset
+
+```{r Viewing Structure of Data, eval=FALSE}
+str(hr_attrition_transformed)
+```
+
+By reviewing the structure of the dataset, I identify that a few variables need to be converted into categorical variables and checked for the correct baseline. The table below lists the variables I’ll focus on.
+
+<details>
+
+<summary><strong><u>Click to View Variables</u></strong></summary>
+
+| Variable                  | Baseline   |
+|---------------------------|------------|
+| Attrition                 | No         |
+| Business Travel           | Non-travel |
+| Department                | N/A        |
+| Education                 | 1          |
+| Education_Field           | N/A        |
+| Environment Satisfaction  | 1          |
+| Gender                    | Male       |
+| Job Involvement           | 1          |
+| Job Level                 | 1          |
+| Job Role                  | N/A        |
+| Job Satisfaction          | 1          |
+| Marital Status            | N/A        |
+| Overtime                  | No         |
+| Performance Rating        | 1          |
+| Relationship Satisfaction | 1          |
+| Stock Option Level        | 0          |
+| Work-Life Balance         | 1          |
+
+</details>
+
+<br>Standardizing these variables correctly will enhance the model's performance and make the results easier to interpret! ✅
+
+### **Step 8**: Converting numeric/character variables to categorical
+
+In this step, I convert certain numeric/character variables into categorical variables using the **as.factor()** function in R. This is necessary for variables that represent categories (like job levels or satisfaction) but are currently stored as numbers. By doing so, I ensure that the model treats them as distinct categories, not continuous values, which will improve the accuracy and interpretability of my analysis.
+
+```{r Mutating to Factors}
+  hr_attrition_transformed <- hr_attrition_transformed %>% 
+    mutate(attrition = as.factor(attrition),
+           business_travel = as.factor(business_travel),
+           department = as.factor(department),
+           education = as.factor(education),
+           education_field = as.factor(education_field),
+           environment_satisfaction = as.factor(environment_satisfaction),
+           gender = as.factor(gender),
+           job_involvement = as.factor(job_involvement),
+           job_level = as.factor(job_level),
+           job_role = as.factor(job_role),
+           job_satisfaction = as.factor(job_satisfaction),
+           marital_status = as.factor(marital_status),
+           overtime = as.factor(overtime),
+           performance_rating = as.factor(performance_rating),
+           relationship_satisfaction = as.factor(relationship_satisfaction),
+           stock_option_level = as.factor(stock_option_level),
+           work_life_balance = as.factor(work_life_balance))
+```
+
+### **Step 9**: Releveling variables
+
+First, I inspect the current levels of the categorical variables using the **levels()** function. If the levels are already in the correct order, great — no changes needed! 🎉 However, if the order is incorrect, I use the **factor()** function to set the variables to the desired baseline or order, ensuring that the model processes them correctly.
+
+```{r Releveling Factors}
+levels(hr_attrition_transformed$overtime)
+
+# releveling
+hr_attrition_transformed <- hr_attrition_transformed %>% 
+  mutate(business_travel = factor(business_travel, 
+                                  levels = c("Non-Travel", "Travel_Rarely", "Travel_Frequently")),
+         gender = factor(gender, levels = c("Male", "Female")),
+         marital_status = factor(marital_status, levels = c("Single", "Married", "Divorced")))
+```
+
+Looks like business_travel, gender, and marital_status were the only variables that needed a little re-leveling! Now that they are in the right order, I can move forward confidently, knowing the model will interpret it correctly. ✅
+
+<br> **ALL DONE!**✅
+
+<br>
+
+# 2. **Exploratory Data Analysis (SQL & R)** {#2.}
+
+## Attrition Rates on Key Variables (SQL) {.tabset}
+
+### Attrition Count
+
+```{sql, Attrition Count, connection=con}
+Select attrition,
+COUNT(*) AS count_attrition
+From hr_attrition_transformed
+Group By attrition
+Order By attrition;
+
+-- NOTE: this is an imbalanced data set. Important for our model interpretation.
+```
+
+### Annual Income & Attrition
+
+```{sql, annual_income data, connection=con}
+Select attrition, 
+		MIN(annual_income) AS min_income, 
+		MAX(annual_income) AS max_income,
+		ROUND(AVG(annual_income), 2) AS avg_income 
+From hr_attrition_transformed
+Group By attrition
+Order By attrition; 
+
+--NOTE: those leaving earn about 25K less. Range looks similar, 
+-- but distribution might be different. We can easier see the median in R.
+```
+
+### Business Travel & Attrition
+
+```{sql, business travel count, connection=con}
+Select business_travel, attrition,
+	Count(business_travel) AS count_bus_travel,
+		ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By business_travel),2) AS rate
+From hr_attrition_transformed
+Group By business_travel, attrition
+Order By business_travel, attrition;
+
+--NOTE: Those who travel at all have a higher rate of leaving. 
+-- Dont quite know how much this plays a role in leaving, however.
+```
+
+### Department & Attrition
+
+```{sql, department count, connection=con}
+Select department, attrition,
+	Count(department) AS count_department,
+		ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By department),2) AS rate
+From hr_attrition_transformed
+Group By department, attrition
+Order By department, attrition;
+
+--NOTE: In terms of total employees, sales has a large rate of attrition.
+```
+
+### Education Field & Attrition
+
+```{sql, education count, connection=con}
+Select education_field, attrition,
+	Count(education_field) AS count_edufield,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By education_field),2) AS rate
+From hr_attrition_transformed
+Group By education_field, attrition
+Order By education_field, attrition;
+
+--NOTE: Those with technical degrees have the largest rate with more
+-- than 100 people. Perhaps finding better jobs, higher pay for their
+-- skills, etc...
+```
+
+### Gender & Attrition
+
+```{sql, gender count, connection=con}
+Select gender, attrition,
+	Count(gender) AS count_gender,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By gender),2) AS rate
+From hr_attrition_transformed
+Group By gender, attrition
+Order By gender, attrition;
+
+--NOTE: men and women share about the same rate. No glaring differences.
+```
+
+### Job Involvement & Attrition
+
+```{sql, job involvement, connection=con}
+Select job_involvement, attrition,
+	Count(job_involvement) AS count_involvement,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By job_involvement),2) AS rate
+From hr_attrition_transformed
+Group By job_involvement, attrition
+Order By job_involvement, attrition;
+
+--NOTE: Not surprisingly, those who rate low job involvement have high 
+--      attrition rates (33.73%). The proportion of employees is low compared
+--      to the other ratings. Those who engage in their job stay and vice versa.
+```
+
+### Job Level & Attrition
+
+```{sql, job level, connection=con}
+Select job_level, attrition,
+	Count(job_level) AS count_joblevel,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By job_level),2) AS rate
+From hr_attrition_transformed
+Group By job_level, attrition
+Order By job_level, attrition;
+
+--NOTE: Those with entry level positions (1) have drastically higher rates 
+--      of attrition (26.34%) than any other position group. All other groups
+--      have a 85%+ retention rate.
+--      (1=Entry Level, 2=Mid Level, 3=Senior, 4=Lead, 5=Executive)
+```
+
+### Job Role & Attrition
+
+```{sql, job role count, connection=con}
+Select job_role, attrition,
+	Count(job_role) AS count_jobrole,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By job_role),2) AS rate
+From hr_attrition_transformed
+Group By job_role, attrition
+Order By job_role, attrition;
+
+--NOTE: Not too sure why Sales Representatives have a high rate of attrition (40%).
+--Would need to look more into how that job role plays out in careers.
+```
+
+### Marital Status & Attrition
+
+```{sql, marital count, connection=con}
+Select marital_status, attrition,
+	Count(marital_status) AS count_marital_status,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By marital_status),2) AS rate
+From hr_attrition_transformed
+Group By marital_status, attrition
+Order By marital_status, attrition;
+
+--NOTE: single people are leaving at a higher rate, which could
+-- be interpreted as maybe not having an established career or 
+-- the flexibility to look for other jobs without bigger consequences.
+```
+
+### Overtime & Attrition
+
+```{sql, overtime count, connection=con}
+Select overtime, attrition,
+	Count(overtime) AS count_overtime,
+	ROUND((Count(*) * 100.0) / Sum(Count(*)) OVER (Partition By overtime),2) AS rate
+From hr_attrition_transformed
+Group By overtime, attrition
+Order By overtime, attrition;
+
+--NOTE: Working overtime looks like a big reason to why employees leave.
+-- I would be curious to see how overtime is handled in these work places
+-- (unpaid, low pay, bad conditions, etc..)
+```
+
+### Descriptive Data
+
+```{r Descriptive Data}
+hr_attrition_transformed %>%
+  select(c(1:29)) %>% 
+  summary()
+```
+
+## Distributions of Numeric Variables (R) {.tabset}
+
+I'm not seeing anything in these distributions that might affect the analysis (e.g., outliers, anomalies). Most columns are right skewed which is what I expected due to the nature of the data.
+
+### Age
+
+```{r age distribution, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=age)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(age)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Age",
+       y="Count")+
+  theme_bw()
+```
+
+### Annual Income
+
+```{r income distribution, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=annual_income)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(annual_income)), color = "red",
+                 linetype = "dashed", size=1)+
+    scale_x_continuous(labels = label_number(suffix = "K")) +
+  labs(x="Annual Income",
+       y="Count")+
+  theme_bw()
+```
+
+### Companies Worked For
+
+```{r number of companies worked for, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=num_companies_worked)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(num_companies_worked)), color = "red",
+                 linetype = "dashed", size=1)+
+    scale_x_continuous(breaks = seq(0,10,1),
+                     limits = c(0,10)) +
+  labs(x="# of Companies Worked For",
+       y="Count")+
+  theme_bw()
+```
+
+### Percent Salary Hike
+
+```{r percent salary hike, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=percent_salary_hike)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(percent_salary_hike)), color = "red",
+                 linetype = "dashed", size=1)+
+  scale_x_continuous(labels = label_number(suffix = "%"),
+                     breaks = seq(10,30,5),
+                     limits = c(10, 27)) +
+  labs(x="Percent Salary Hike",
+       y="Count")+
+  theme_bw()
+```
+
+### Total Working Years
+
+```{r total working years, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=total_working_years)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(total_working_years)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Total Working Years",
+       y="Count")+
+  theme_bw()
+```
+
+### Training Times Last Year
+
+```{r training times last year, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=training_times_last_year)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(training_times_last_year)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Training Times Last Year",
+       y="Count")+
+  theme_bw()
+```
+
+### Years at Company
+
+```{r years at company, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=yrs_at_company)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(yrs_at_company)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Years at Company",
+       y="Count")+
+  theme_bw()
+```
+
+### Years in Current Role
+
+```{r years in current role, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=yrs_in_current_role)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(yrs_in_current_role)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Years in Current Role",
+       y="Count")+
+  theme_bw()
+```
+
+### Years Since Last Promotion
+
+```{r years since last promotion, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=yrs_since_last_promotion)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(yrs_since_last_promotion)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Years Since Last Promotion",
+       y="Count")+
+  theme_bw()
+```
+
+### Years with Current Manager
+
+```{r years with current manager, warning=FALSE, echo=FALSE, fig.width=9}
+ggplot(hr_attrition_transformed, aes(x=yrs_with_curr_manager)) +
+  geom_histogram(fill = "navyblue", bins=30, color="white")+
+  geom_vline(aes(xintercept = mean(yrs_with_curr_manager)), color = "red",
+                 linetype = "dashed", size=1)+
+  labs(x="Years with Current Manager",
+       y="Count")+
+  theme_bw()
+```
+
+<br>
+
+## Other Visualizations & Insights (R)
+
+### **Plot 1**: Annual Income by Years at Company
+
+```{r Plot1, fig.height=4, fig.width=9, warning=FALSE}
+# breaking down data into age groups for simplicity
+# Note: Age range = 0-40
+hr_attrition_transformed <- hr_attrition_transformed %>%
+  mutate(YearRange = cut(yrs_at_company,
+                           breaks = c(0, 5, 10, 
+                                      15, 20, 25, 
+                                      30, 35, 40),
+                           labels = c("0-5", "05-10", 
+                                      "10-15", "15-20", 
+                                      "20-25", "25-30", 
+                                      "30-35", "35-40"),
+                           include.lowest = TRUE))
+
+# putting data into plot dataframe
+plot1df <- hr_attrition_transformed %>% 
+  group_by(YearRange) %>% 
+  summarise(annual_income = round(mean(annual_income, na.rm=T),0))
+
+#Line Graph
+p1 <- ggplot(plot1df, aes(x=YearRange, y=annual_income, group = 1))+
+  scale_y_continuous(breaks = seq(10, 250, 20),
+                     labels = label_number(suffix = "K"),
+                     limits = c(10, 250))+
+  geom_line(color="royalblue4")+
+  geom_point(size = 2.7,
+             fill = "royalblue",
+             color = "black",
+             shape = 23)+
+  geom_text(label = "Max Income = $239,998",
+            x=6.5,
+            y=50000)+
+  geom_text(label = "Min Income = $12,108",
+            x=6.45,
+            y=30000)+
+  labs(title = "Relationship between annual salary and # of years at company",
+       x= "Years at Company",
+       y= "Annual Income ($)")+
+  theme_bw()+
+  theme(plot.title = element_text(hjust=0, size=12, face="bold"),
+        axis.title = element_text(size=10, face="bold"),
+        axis.text = element_text(size=8),
+        plot.background = element_rect(fill="gray95"))
+
+#for interactive plots
+ggplotly(p1)
+```
+
+#### <u>Comments</u>:
+
+At 0-15 years, the salary increases by an average of around 30K, reflecting typical career growth as employees gain experience and promotions. Between 15-30 years, there is a sharper rise in salary, suggesting that employees who stay longer with the company are receiving substantial promotions and pay raises. However, around 30-40 years, the salary tends to either drop or level off. This could be due to several reasons: employees who have been with the company for this long may be nearing retirement, which can lead to a plateau in salary; senior positions may be given to younger employees; or employees who have been with the company for many years may have reached the peak of their job opportunities, with fewer new advancement opportunities available.\
+<u>Note</u>: For scale, the y-axis was set to represent both the minimum and maximum annual income in the data.
+
+### **Plot 2**: Relationship between Job Satisfaction & Employee Attrition
+
+```{r Table setup for plot2, message=FALSE, warning=FALSE, fig.width=9}
+jobsat <- hr_attrition_transformed %>% 
+  #job satisfaction
+  group_by(job_satisfaction, attrition) %>% 
+  summarise(employee_count = n(), .groups = "drop") %>% 
+  mutate(jobsat_rate = round(employee_count /sum(employee_count)*100, 2)) %>% 
+  ungroup() %>% 
+    group_by(job_satisfaction) %>%
+  mutate(cumul_rate = sum(jobsat_rate)) %>% 
+  ungroup() %>% 
+  select(attrition, job_satisfaction, jobsat_rate, cumul_rate)
+
+# Bar graph
+p2 <- ggplot(jobsat, aes(x=job_satisfaction, y=jobsat_rate,
+                    fill=attrition)) +
+  geom_col(stat = 'identity',
+           position = position_dodge(),
+           width = 0.8,
+           color="black") +
+    geom_text(aes(label = ifelse(attrition == "No",
+                                 paste0(round(cumul_rate, 1), "%"),
+                                 "")), 
+            position = position_stack(vjust = 0.95), size = 4) +
+    scale_y_continuous(breaks = seq(0, 50, 10),
+                     labels = label_number(suffix = "%"),
+                     limits = c(0,50)) +
+  labs(title = "Job Satisfaction and Employee Attrition",
+       x = "Job Satisfaction Rating",
+       y = "Percentage of Employees",
+       fill = "Attrition Status") +
+  scale_fill_manual(values = c("darkseagreen4", "indianred")) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust=0, face="bold", size=12),
+        plot.background = element_rect(fill="gray95"),
+        axis.title = element_text(hjust=0.5, face="bold", size=10),
+        axis.text = element_text(size=8),
+        legend.background = element_rect(fill="papayawhip"))
+  
+#interactive plot
+ggplotly(p2)
+```
+
+#### <u>Comments</u>:
+
+Employees with a job satisfaction rating of 3 or 4 make up the largest portion of the workforce, each accounting for around 30% of employees. This suggests that most employees are at least moderately satisfied with their jobs. The red portion representing employees who left the company remains relatively small across all satisfaction levels. However, lower satisfaction ratings (1 and 2) may still be linked to a higher risk of attrition, which would require further analysis to confirm.
+
+Overall, attrition appears to be low across all job satisfaction groups, indicating that while job satisfaction may play a role in employee retention, it is not the sole determining factor.
+
+### **Plot 3**: Relationship between Work Environment Satisfaction & Employee Attrition
+
+```{r Plot3, warning=FALSE, fig.width=9}
+envirosat <- hr_attrition_transformed %>% 
+  #environment satisfaction
+  group_by(environment_satisfaction, attrition) %>% 
+  summarise(employee_count = n(), .groups = "drop") %>% 
+  mutate(envirosat_rate = round(employee_count /sum(employee_count)*100, 2)) %>% 
+  ungroup() %>%
+      group_by(environment_satisfaction) %>%
+  mutate(cumul_rate = sum(envirosat_rate)) %>% 
+  ungroup() %>% 
+  select(attrition, environment_satisfaction, envirosat_rate,
+         cumul_rate)
+
+# Bar graph
+p3 <- ggplot(envirosat, aes(x=environment_satisfaction,
+                            y=envirosat_rate,
+                            fill=attrition)) +
+  geom_col(stat = 'identity',
+           position = position_dodge(),
+           width = 0.8,
+           color="black") +
+      geom_text(aes(label = ifelse(attrition == "No",
+                                 paste0(round(cumul_rate, 1), "%"),
+                                 "")), 
+            position = position_stack(vjust = 0.95), size = 4) +
+    scale_y_continuous(breaks = seq(0, 50, 10),
+                     labels = label_number(suffix = "%"),
+                     limits = c(0,50)) +
+  labs(title = "Work Environment Satisfaction and Employee Attrition",
+       x = "Work Environment Satisfaction Rating",
+       y = "Percentage of Employees",
+       fill = "Attrition Status") +
+  scale_fill_manual(values = c("darkslategray3", "darkgoldenrod")) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust=0, face="bold", size=12),
+        plot.background = element_rect(fill="gray95"),
+        axis.title = element_text(hjust=0.5, face="bold", size=10),
+        axis.text = element_text(size=8),
+        legend.background = element_rect(fill="papayawhip"))
+  
+#interactive plot
+ggplotly(p3)
+```
+
+#### <u>Comments</u>:
+
+Similarly, employees who rate their work environment satisfaction high (3 or 4) make up the majority of employees in the company. Attrition rates remain low regardless of work environment rating (\< 5%), indicating that the work environment of the employee may not be a large factor in deciding to leave a company or not. Furthermore, it could be that the company these employees work at has a positive, clean, and collaborative work environment, meaning there may be other factors (i.e., compensation, career growth) that the company is not strong in, contributing to higher attrition rates.
+
+### **Plot 4**: Relationship between Relationship Satisfaction & Employee Attrition
+
+```{r Plot4, warning=FALSE, fig.width=9}
+relsat <- hr_attrition_transformed %>% 
+  #relationship satisfaction
+  group_by(relationship_satisfaction, attrition) %>% 
+  summarise(employee_count = n(), .groups = "drop") %>% 
+  mutate(relsat_rate = round(employee_count /sum(employee_count)*100, 2)) %>% 
+  ungroup() %>%
+      group_by(relationship_satisfaction) %>%
+  mutate(cumul_rate = sum(relsat_rate)) %>% 
+  ungroup() %>% 
+  select(attrition, relationship_satisfaction, relsat_rate, cumul_rate)
+
+# Bar graph
+p4 <- ggplot(relsat, aes(x=relationship_satisfaction,
+                            y=relsat_rate,
+                            fill=attrition)) +
+  geom_col(stat = 'identity',
+           position = position_dodge(),
+           width = 0.8,
+           color="black") +
+      geom_text(aes(label = ifelse(attrition == "No",
+                                 paste0(round(cumul_rate, 1), "%"),
+                                 "")), 
+            position = position_stack(vjust = 0.95), size = 4) +
+    scale_y_continuous(breaks = seq(0, 50, 10),
+                     labels = label_number(suffix = "%"),
+                     limits = c(0,50)) +
+  labs(title = "Relationship Satisfaction and Employee Attrition",
+       x = "Relationship Satisfaction Rating",
+       y = "Percentage of Employees",
+       fill = "Attrition Status") +
+  scale_fill_manual(values = c("skyblue3", "salmon2")) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust=0, face="bold", size=12),
+        plot.background = element_rect(fill="gray95"),
+        axis.title = element_text(hjust=0.5, face="bold", size=10),
+        axis.text = element_text(size=8),
+        legend.background = element_rect(fill="papayawhip"))
+  
+#interactive plot
+ggplotly(p4)
+```
+
+#### <u>Comments</u>:
+
+When examining employees' personal lives, relationship satisfaction appears to have little impact on attrition. The majority of employees (60.6%) report high relationship satisfaction, with ratings of 3 or 4. This suggests that employees with varying levels of relationship satisfaction are equally likely to stay with the company.
+
+### **Plot 5**: Relationship between Work-Life Balance & Employee Attrition
+
+```{r Plot5, warning=FALSE, fig.width=9}
+worklife <- hr_attrition_transformed %>% 
+  #work-life balance
+  group_by(work_life_balance, attrition) %>% 
+  summarise(employee_count = n(), .groups = "drop") %>% 
+  mutate(worklife_rate = round(employee_count /sum(employee_count)*100, 2)) %>%
+  ungroup() %>%
+      group_by(work_life_balance) %>%
+  mutate(cumul_rate = sum(worklife_rate)) %>% 
+  ungroup() %>% 
+  select(attrition, work_life_balance, worklife_rate, cumul_rate)
+
+# Bar graph
+p5 <- ggplot(worklife, aes(x=work_life_balance,
+                            y=worklife_rate,
+                            fill=attrition)) +
+  geom_col(stat = 'identity',
+           position = position_dodge(),
+           width = 0.8,
+           color="black") +
+      geom_text(aes(label = ifelse(attrition == "No",
+                                 paste0(round(cumul_rate, 1), "%"),
+                                 "")), 
+            position = position_stack(vjust = 0.9), size = 4) +
+    scale_y_continuous(breaks = seq(0, 57, 10),
+                     labels = label_number(suffix = "%"),
+                     limits = c(0,57)) +
+  labs(title = "Work-Life Balance and Employee Attrition",
+       x = "Work-Life Balance Rating",
+       y = "Percentage of Employees",
+       fill = "Attrition Status") +
+  scale_fill_manual(values = c("lightcyan4", "tomato3")) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust=0, face="bold", size=12),
+        plot.background = element_rect(fill="gray95"),
+        axis.title = element_text(hjust=0.5, face="bold", size=10),
+        axis.text = element_text(size=8),
+        legend.background = element_rect(fill="papayawhip"))
+  
+#interactive plot
+ggplotly(p5)
+```
+
+#### <u>Comments</u>:
+
+The majority of employees (60.8%) rate their work-life balance as a 3, followed by 23.4% rating it as a 2. Only a small percentage of employees rate their work-life balance as either extremely poor (1) or excellent (4). Interestingly, attrition rates remain relatively low across all ratings, with only a slight increase for employees who rate their work-life balance as a 3.
+
+### **Plot 6**: Correlation Matrix 
+
+```{r Plot Correlation table, echo=FALSE, fig.height=5, fig.width=9, warning=FALSE}
+# only selecting numeric variables or converting categorical to numeric
+corrMatrix <- hr_attrition_transformed %>%
+  mutate(attrition = as.numeric(attrition == "Yes"),
+         gender = as.numeric(gender == "Female"),
+         overtime = as.numeric(overtime == "Yes")) %>% 
+  mutate(across(where(is.factor), as.numeric)) %>%
+  select(2, 1, 5, 7:11, 13, 15, 16:29) %>% 
+  cor(use="complete.obs")
+
+attrition_cor <- data.frame(
+  Variable = rownames(corrMatrix),
+  Correlation = corrMatrix[, "attrition"]) %>% 
+  filter(Variable != "attrition") %>% 
+  arrange(desc(Correlation))
+
+corrPlot <- ggplot(attrition_cor, aes(x=reorder(Variable, -Correlation), y=Correlation))+
+  geom_bar(stat='identity', color="White", fill = "royalblue3")+
+  scale_y_continuous(breaks = seq(-0.2, 0.25, 0.05),
+                     limits = c(-0.2, 0.25))+
+  labs(title = "How Variables Correlate with Employee Attrition",
+       x="",
+       y="") +
+  theme_bw()+
+  theme(axis.text.x = element_text(hjust = 1, vjust = 0.5, angle= 90,
+                                   size=7),
+        plot.title = element_text(face = "bold", size=14, hjust=0),
+        plot.background = element_rect(fill="gray95"))
+
+ggplotly(corrPlot)
+```
+
+#### <u>Comments</u>:
+
+Performance Rating, Employee Number and Percent Salary Hike show no correlation with Attrition. Therefore, we will remove these variables and store the refined dataset in a new data frame for our predictive analysis.
+
+Additionally, Overtime exhibits a low-to-moderate positive correlation with Attrition (0.25), suggesting that employees who work overtime are more likely to leave.
+
+## Identifying & Removing Independent Variables with High Intercorrelation
+
+```{r Correlation & Independent Vars}
+ind_corr <- corrMatrix %>%
+  melt() %>% 
+  filter(value > 0.7) %>% #threshold > 0.7
+  filter(Var1 != Var2) #avoid looking at redundant info
+
+ind_corr
+```
+
+#### <u>Removing</u>:
+
+-   **employee_number**: irrelevant to data
+-   **job_level**: highly correlated with annual_income
+-   **job_role**: multicollinearity with department
+-   **monthly_income**: highly correlated with annual_income; redundant
+-   **performance_rating**: highly correlated with percent_salary_hike
+-   **total_working_years**: redundant with annual_income
+-   **yrs_in_current_role**: highly correlated with yrs_at_company
+-   **yrs_with_curr_manager**: similar as above
+-   **YearRange**: irrelevant to final data set
+
+```{r removing vars}
+#removing selected columns from hr_attrition_transformed
+HRfinaldata <- hr_attrition_transformed %>% 
+  select(-c(7, 11, 12, 15, 19, 22, 26, 28, 30)) 
+```
+
+<br> **ALL DONE!**✅
+
+<br>
+
+# 3. **Modeling & Analysis (R)** {#3.}
+
+In this section, I will walk through the modeling process to identify the key factors contributing to employee attrition within this company. I start by building the model, followed by checking its assumptions to ensure reliability and that the data fits the model well. Next, I analyze the predicted probabilities and break down the impact of demographic, job-related, and work/life satisfaction factors on employee attrition. Lastly, I bring in results from my exploratory findings and tie it in with the analysis.
+
+<details>
+
+<summary><strong><u>What to Expect in This Section</u></strong></summary>
+
+- **Running the Model**: fitting a logistic regression model to see what influences attrition.
+- **Checking Model Assumptions**: ensuring the model meets key statistical assumtions for valid interpretation.
+- **Predicted Probability Plots**: visualizing how different factors averaged across each other influence the likelihood of attrition
+- **Assessing Demographic Factors**: understanding the impact of age, gender, education, and other demographics.
+- **Assessing Job-Related Factors**: understanding how income, working overtime, tenure, and others contribute to attrition.
+- **Assessing Work-Life Satisfaction**: understanding the role of work-life balance, job satisfaction, and personal life on attrition.
+- **Model Evaluation**: seeing the performance of the model and pointing out flaws that helps communicate my findings to stakeholders more effectively.
+
+</details>
+
+## Logistic Regression
+
+I chose the logistic regression model (Generalized Linear Model or GLM) because it can handle binary outcomes such as employee attrition. This model allows me to examine how various factors influence the likelihood of attrition, providing odds ratios that are intuitive and easy to explain. Logistic regression is well-suited for both continuous variables (like age and income) and categorical variables (such as education level and department). It also doesn’t require a linear relationship between predictors and the outcome, making it flexible for the types of data in this study. While more complex models may offer better prediction accuracy, logistic regression provides an interpretable approach that balances model fit with computational efficiency.
+
+```{r GLM model with unbalanced feature}
+HR_model <- glm(attrition ~ ., 
+                 data = HRfinaldata,
+                 family = binomial)
+```
+
+
+### Checking Model Assumptions
+
+```{r Model Assumptions, fig.width=10, fig.height=8}
+check_model(HR_model)
+```
+
+✅ Model fits the data well  
+✅ Residuals look uniform with a few outliers  
+✅ The outliers are not influential  
+✅ Multicollinearity is less than 5  
+✅ Residuals exhibit a uniform distribution
+
+
+## Predicted Probability Plots {.tabset}
+
+```{r Extract Predictions}
+#Creating Lists of Predicted Probabilities averaged over all other variables
+predictions <- ggeffects::ggeffect(HR_model)
+```
+
+#### **What are Predicted Probabilities?**
+
+Predicted probabilities represent the likelihood of an event occurring based on the model’s analysis. In this case, the model calculates the probability that an employee will leave the company given a specific factor (e.g., age, job role, work-life balance). These probabilities are averaged over all other factors in the model, meaning that while we focus on one variable at a time in the plot, the prediction accounts for the presence of all other variables in the background. A probability close to 100% (or 1) suggests a high likelihood of attrition, while a probability close to 0% (or 0) suggests a low likelihood.
+
+In the graphs below, the y-axis shows the predicted probability of attrition, while the x-axis represents the variable being analyzed (e.g., age or marital status). Since the probabilities are averaged over all other factors, the trends we see represent the general effect of each variable while holding everything else constant.
+
+### Age
+
+```{r Age prob plot, echo=FALSE, fig.width=9}
+plot(predictions$age)+
+  theme_bw() +
+  labs(caption = str_wrap("As age increases, rates of attrition drop. Younger people are more likely to move around early in their careers, whereas older individuals are more established and will have less reason to leave.", width=75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.6, vjust = 125,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Business Travel
+```{r Business travel prob plot, echo=FALSE, fig.width=9}
+plot(predictions$business_travel)+
+  theme_bw() +
+  labs(caption = str_wrap("Traveling more frequently for one's job has a large effect on whether the employee stays or not. It could be that these trips are long, taxing, or not viewed as necessary for the position.", width=75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 115,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Department
+```{r Department prob plot, echo=FALSE, fig.width=9}
+plot(predictions$department)+
+  theme_bw() +
+  labs(caption = str_wrap("High variability in Human Resources. This makes sense since a small sample of 63 employees means less data to make accurate predictions. The Sales department has the highest predicted rate of attrition compared to any other department.", width=65),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.6, vjust = 125,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Education
+```{r Education prob plot, echo=FALSE, fig.width=9}
+plot(predictions$education)+
+  theme_bw() +
+  labs(caption = str_wrap("Hard to tell real differences for different levels of education. What we can see is that having a doctorate(5) decreases the predicted probability of quitting (<5%). However, it does not look like education really influences if the employee quits or not.", width=75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 50,
+                                    color="black", size = 10),
+        plot.caption.position = "plot")
+```
+
+### Education Field
+```{r education field prob plot, echo=FALSE, fig.width=9}
+plot(predictions$education_field)+
+  theme_bw() +
+  labs(caption = str_wrap("Again, we see that high variability in those who studied in Human Resources. The low sample size (n=27) effects that. I am not seeing a field of study that stands out from the rest in terms of staying or leaving. Attrition rates for having a technical degree are slightly higher, but only by a couple percent.", width = 75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 114,
+                                    color="black", size = 10.5),
+        plot.caption.position = "plot")
+```
+
+### Environment Satisfaction
+```{r enviro sat prob plot, echo=FALSE, fig.width=9}
+plot(predictions$environment_satisfaction)+
+  theme_bw() +
+  labs(caption = str_wrap("Clear as day. If an employee likes their work environment more, they are far less likely to quit.", width=40),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 120,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Gender
+```{r gender prob plot, fig.width=9, echo=FALSE}
+plot(predictions$gender)+
+  theme_bw() +
+  labs(caption = str_wrap("Check out the y-axis. The difference in predicted attrition rates between males and females looks huge, when it really only differs by about 3%. Nonetheless, females show a lower probability of quitting than males", width=50),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 110,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Job Involvement
+```{r job involve prob plot, echo=FALSE, fig.width=9}
+plot(predictions$job_involvement)+
+  theme_bw() +
+  labs(caption = str_wrap("The more involved an employee is in their work, the more they probably enjoy their work, the less likely they are to quit", width=40),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 105,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Job Satisfaction
+```{r job sat prob plot, echo=FALSE, fig.width=9}
+plot(predictions$job_satisfaction)+
+  theme_bw() +
+  labs(caption = str_wrap("Greater job satisfaction equals less of a reason to quit. Very low attrition rates for 'very high' job satisfaction.", width=40),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 122,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Marital Status
+```{r marital status prob plot, echo=FALSE, fig.width=9}
+plot(predictions$marital_status)+
+  theme_bw() +
+  labs(caption = str_wrap("Higher variability for single employees than married or divorced. However, single employees are more likely to quit. This could likely be because they may only provide for themselves and/or exploring career options. Having a spouse or child to provide for would certainly deter someone away from quitting their job. Married and divorced employees might be leaving for better job opportunities.", width=65),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.6, vjust = 110,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### # of Companies Worked For
+```{r companies worked for prob plot, echo=FALSE, fig.width=9}
+plot(predictions$num_companies_worked)+
+  theme_bw() +
+  labs(caption = str_wrap("Is job hopping a predictor of higher attrition rates? This could certainly be the case, but I would need more evidence to support that question. Some employees may be looking for faster career growth opportunities and are less likely to stay for long periods of time at one company.", width=75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.44, vjust = 120,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Overtime
+```{r overtime prob plot, echo=FALSE, fig.width=9}
+plot(predictions$overtime)+
+  theme_bw() +
+  labs(caption = str_wrap("Even in my exploratory results, employees who work overtime are more likely to quit. One has to ask themself: Are they getting paid? Are they working off the clock at home? Is it too much work? Not meeting deadlines? There are many reasons why this could be the case.", width=50),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 80,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Percent Salary Hike
+```{r salary hike prob plot, echo=FALSE, fig.width=9}
+plot(predictions$percent_salary_hike)+
+  theme_bw() +
+  labs(caption = str_wrap("Salary raises don't seem to greatly affect an employee's reason for leaving the company. Even a 25% increase doesn't seem to lower the attrition rate much when compared to a 0-5% increase. Additionally, the variability is large, signifying other underlying factors influence this decision.", width=75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 125,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Relationship Satisfaction
+```{r rel sat prob plot, echo=FALSE, fig.width=9}
+plot(predictions$relationship_satisfaction)+
+  theme_bw() +
+  labs(caption = str_wrap("Greater relationship satisfaction decreases the rate of attrition. I am curious to see how relationships were defined in this survey. Is it general? Romantic? Work related?", width=50),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 110,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Stock Option Level
+```{r stock option prob plot, echo=FALSE, fig.width=9}
+plot(predictions$stock_option_level)+
+  theme_bw() +
+  labs(caption = str_wrap("Due to the large variability in stock option 4, it seems like not many employees were given that option. We can see that NOT having a stock option greatly increases the chances of an employee quitting.", width=60),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 115,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Training Events Last Year
+```{r training events prob plot, echo=FALSE, fig.width=9}
+plot(predictions$training_times_last_year)+
+  theme_bw() +
+  labs(caption = str_wrap("Attending more training events reduces the employee's chances of quitting. Perhaps the employee feels that trainings help improve their quality of work and helps them be seen or heard by their superiors. Additionally, it can help management lead their team better.", width=75),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.95, vjust = 120,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Work-Life Balance
+```{r work life prob plot, echo=FALSE, fig.width=9}
+plot(predictions$work_life_balance)+
+  theme_bw() +
+  labs(caption = str_wrap("Work-life balance is an important factor for most any employee. A company that values that balance more will definitely see happier employees. Greater work life balance contributes to less attrition within the company.", width=50),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 110,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Years at Company
+```{r yrs at comp prob plot, echo=FALSE, fig.width=9}
+plot(predictions$yrs_at_company)+
+  theme_bw() +
+  labs(caption = str_wrap("An employee that stays longer than 15 years will have less than a 5% predicted probability of quitting. At 40 years, that rate is almost at 0%.", width=40),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 110,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Years Since Last Promotion
+```{r promotion prob plot, echo=FALSE, fig.width=9}
+plot(predictions$yrs_since_last_promotion)+
+  theme_bw() +
+  labs(caption = str_wrap("More years without a promotion will increase the employee's chances of quitting. Going unnoticed for that long is either the company's fault or the employee's.", width=40),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 100,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+### Annual Income
+```{r annual income prob plot, echo=FALSE, fig.width=9}
+plot(predictions$annual_income)+
+  theme_bw() +
+  labs(caption = str_wrap("Obvious to anyone: more money, less problems.", width=80),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 110,
+                                    color="black", size=10.5),
+        plot.caption.position = "plot")
+```
+
+
+```{r Data Frame Table of Model Results, include=FALSE}
+HR_results <- cbind(summary(HR_model)$coefficients[ ,-3],
+                exp(summary(HR_model)$coefficients[ ,1]),
+                 # Apply BH adjustment to the p-values
+                exp(tidy(HR_model, conf.int=T, conf.level = 0.95, 
+                          exponentiate = FALSE, quick = FALSE)[c(1:43),6:7])) %>%
+    round(3) %>% 
+  mutate(across(c(1:2,4:6), ~ round(.x, 2)))
+colnames(HR_results) <- c("b", "S.E.", "p", "OR", "95% LCL", "95% UCL")
+rownames(HR_results) <- NULL
+HR_results$Variable <- c("Intercept", "Age","Rarely Travel", "Frequently Travel",
+                               "R&D Department", "Sales Department", "College",
+                               "Bachelor", "Masters", "Doctorate", "Life Sciences",
+                               "Marketing", "Medical", "Other", "Technical Degree",
+                               "Medium Environment Sat", "High Environment Sat",
+                               "Very High Environment Sat", "Female",
+                         "Medium Job Involvement", "High Job Involvement",
+                         "Very High Job Involvement", "Medium Job Sat",
+                         "High Job Sat", "Very High Job Sat", "Married", 
+                         "Divorced",
+                               "Companies Worked For", "Working Overtime",
+                         "Percent Salary Increase",
+                               "Medium Relationship Sat", "High Relationship Sat",
+                               "Very High Relationship Sat", "Stock Option1",
+                               "Stock Option2", "Stock Option3", 
+                               "Training Times Last Year", 
+                               "Good Work-Life Balance", 
+                               "Better Work-Life Balance", 
+                               "Best Work-Life Balance", "Years at Company",
+                               "Years Since Last Promotion", "Annual Income")
+
+#Benjamin-Hochberg Correction Procedure
+HR_results$p <- round(p.adjust(HR_results$p, method = "BH"),3)
+
+#final dataframe
+HR_results <- HR_results %>% 
+  select(7, everything())
+
+
+#split data into categories for inference
+  #1. Demographic Info
+HR_demographic <- HR_results %>% 
+  filter(Variable %in% c("Age",
+                         "Female",
+                         "College", "Bachelor", "Masters", "Doctorate", "Life Sciences",
+                         "Marketing", "Medical", "Other", "Technical Degree",
+                         "Married", "Divorced",
+                         "Companies Worked For")) %>% 
+  mutate(Variable = factor(Variable, levels = rev(c("Age",
+                         "Female",
+                         "College", "Bachelor", "Masters", "Doctorate", "Life Sciences",
+                         "Marketing", "Medical", "Other", "Technical Degree",
+                         "Married", "Divorced",
+                         "Companies Worked For"))))
+  #2. Job Related Info
+HR_jobrelated <- HR_results %>% 
+  filter(Variable %in% c("Rarely Travel", "Frequently Travel",
+                         "R&D Department", "Sales Department",
+                         "Medium Job Involvement", "High Job Involvement", "Very High Job Involvement",
+                         "Years at Company",
+                         "Years Since Last Promotion",
+                         "Annual Income",
+                         "Stock Option1", "Stock Option2", "Stock Option3",
+                         "Training Times Last Year",
+                         "Working Overtime",
+                         "Percent Salary Increase")) %>% 
+  mutate(Variable = factor(Variable, levels = rev(c("Rarely Travel", "Frequently Travel",
+                         "R&D Department", "Sales Department",
+                         "Medium Job Involvement", "High Job Involvement", "Very High Job Involvement",
+                         "Years at Company",
+                         "Years Since Last Promotion",
+                         "Annual Income",
+                         "Stock Option1", "Stock Option2", "Stock Option3",
+                         "Training Times Last Year",
+                         "Working Overtime", "Percent Salary Increase"))))
+
+  #3. Work Satisfaction & Work-Life Balance
+HR_satisfaction <- HR_results %>% 
+  filter(Variable %in% c("Medium Environment Sat", "High Environment Sat", "Very High Environment Sat",
+                         "Medium Job Sat",
+                         "High Job Sat", "Very High Job Sat",
+                         "Medium Relationship Sat", "High Relationship Sat", "Very High Relationship Sat",
+                         "Good Work-Life Balance", "Better Work-Life Balance", "Best Work-Life Balance")) %>% 
+  mutate(Variable = factor(Variable, levels = rev(c("Medium Environment Sat", "High Environment Sat", "Very High Environment Sat",
+                         "Medium Job Sat",
+                         "High Job Sat", "Very High Job Sat",
+                         "Medium Relationship Sat", "High Relationship Sat", "Very High Relationship Sat",
+                         "Good Work-Life Balance", "Better Work-Life Balance", "Best Work-Life Balance"))))
+
+```
+
+
+## Assessing Demographic Factors
+
+```{r HR demographic plot, fig.height=6, fig.width=9, echo=FALSE}
+ORplot_demographics <- ggplot(HR_demographic, aes(x = OR, y = Variable, 
+                                     text=paste0("p=" ,p))) + 
+  geom_vline(aes(xintercept = 1), size = .5, linetype = "dashed") + 
+  geom_errorbarh(aes(xmax = `95% UCL`, xmin = `95% LCL`), size = 0.5, 
+                 height = .3, color = "black") +
+  geom_point(shape = 23, color="black", fill = "royalblue3", size = 2) +
+  scale_x_continuous(breaks = seq(0, 6.5, 1), labels = seq(0, 6.5, 1),
+                     limits = c(0,6.5))+
+  theme_bw() +
+  labs(title = "Odds Ratios of Demographic Variables",
+       x= "Odds Ratio",
+       y= "") +
+    theme(plot.title = element_text(hjust = 0, face = "bold", size = 14),
+          plot.background = element_rect(fill="gray95"),
+          axis.title = element_text(face="bold", size=12))
+
+ggplotly(ORplot_demographics)
+```
+
+#### <u>**Key Takeaways**</u>:
+
+- Every 1-year increase in age decreases the odds of quitting by 4%
+- For females, the odds of quitting are 35% lower than for males.
+- For each additional company the employee has worked for, the odds of quitting increase by 16%
+- Education, Field of Education, and Marital Status do not show a statistically significant effect on the odds of quitting. While there may be some variation, the model does not provide enough evidence to say they influence employee attrition.
+
+
+
+## Assessing Job-Related Factors
+
+```{r HR job related plot, echo=FALSE, fig.height=6, fig.width=9}
+ORplot_job <- ggplot(HR_jobrelated, aes(x = OR, y = Variable, 
+                                     text=paste0("p=" ,p))) + 
+  geom_vline(aes(xintercept = 1), size = .5, linetype = "dashed") + 
+  geom_errorbarh(aes(xmax = `95% UCL`, xmin = `95% LCL`), size = 0.5, 
+                 height = .3, color = "black") +
+  geom_point(shape = 23, color="black", fill = "royalblue3", size = 2) +
+  scale_x_continuous(breaks = seq(0, 12.5, 2), labels = seq(0, 12.5, 2),
+                     limits = c(0,12.5))+
+  theme_bw() +
+  labs(title = "Odds Ratios of Job Related Variables",
+       x= "Odds Ratio",
+       y= "") +
+    theme(plot.title = element_text(hjust = 0, face = "bold", size = 14),
+          plot.background = element_rect(fill="gray95"),
+          axis.title = element_text(face="bold", size=12))
+
+ggplotly(ORplot_job)
+```
+
+
+#### <u>**Key Takeaways**</u>:
+
+- Compared to not traveling at all, traveling rarely (131%) and traveling frequently (459%) greatly increase the odds of an employee quitting
+- Being more involved in one's job significantly decreases the odds of quitting by 69-88%
+- Each additional year an employee stayed at the company decreased the odds of quitting by 8%
+- Each additional year without a promotion increases the odds of that employee quitting by 17%
+- For every additional $1,000 the employee makes annually, the odds of quitting decrease by 1%
+- Compared to no stock option, having at least 1 level of stock option decreases the odds of quitting by 61%
+- Employees who work overtime have 545% higher odds of quitting compared to those who do not
+
+
+
+## Assessing Work/Life Satisfaction
+
+```{r HR satisfaction plot, fig.height=6, echo = FALSE, fig.width=9}
+ORplot_sat <- ggplot(HR_satisfaction, aes(x = OR, y = Variable, 
+                                     text=paste0("p=" ,p))) + 
+  geom_vline(aes(xintercept = 1), size = .5, linetype = "dashed") + 
+  geom_errorbarh(aes(xmax = `95% UCL`, xmin = `95% LCL`), size = 0.5, 
+                 height = .3, color = "black") +
+  geom_point(shape = 23, color="black", fill = "royalblue3", size = 2) +
+  scale_x_continuous(breaks = seq(0, 6.5, 1), labels = seq(0, 6.5, 1),
+                     limits = c(0,6.5))+
+  theme_bw() +
+  labs(title = "Odds Ratios of Work/Life Satisfaction Variables",
+       x= "Odds Ratio",
+       y= "") +
+    theme(plot.title = element_text(hjust = 0, face = "bold", size = 14),
+          plot.background = element_rect(fill="gray95"),
+          axis.title = element_text(face="bold", size=12))
+
+ggplotly(ORplot_sat)
+```
+
+#### <u>**Key Takeaways**</u>:
+
+- Generally, higher environment and job satisfaction and greater work-life balance decrease the odds of an employee quitting
+- Similarly, greater relationship satisfaction decreases the odds of quitting
+
+## Model Evaluation
+```{r model performance, eval=FALSE, include=FALSE}
+performance(HR_model)
+
+conf_matrix <- HRfinaldata %>% 
+  mutate(pred_probs = as.vector(fitted.values(HR_model))) %>% 
+  mutate(predicted_outcome = case_when(
+    pred_probs > 0.5 ~ "Yes",
+    TRUE ~ "No"))
+cross_table <- table(conf_matrix$attrition, conf_matrix$predicted_outcome)
+confusionMatrix(cross_table)
+```
+
+The model has an accuracy rate of 88.5%. It seems quite high, right? It's important to note that the model has trouble identifying the actual quitters (as shown by the low recall of 43% below). In summary, the model is good at predicting who WON'T leave but less effective at identifying who will.
+
+<u>**Tjur's R^2^</u> =** 0.33; A 33% indicates substantial separation between the predicted values of the No's and Yes's. That's a good thing!
+
+<u>**Precision</u> =** 75%; percentage of actual "non-quitters" correctly identified by the model.
+
+<u>**Recall</u> =** 43%; percentage of "quitters" the model correctly identified.
+
+<u>**F1-score</u> =** 54.7%; the model shows low accuracy in identifying attrition cases and minimizing false positives.
+
+### **Confusion Matrix**
+
+| Actual/Predicted| No (Predicted)   | Yes (Predicted) |
+|-----------------|------------------|-----------------|
+| No (Actual)     | 1199 (true neg)  | 34 (false pos)  |
+| Yes (Actual)    | 135 (false neg)  | 102 (true pos)  |
+
+```{r Predicted prob of attrition, echo=FALSE, fig.width=9}
+predicted_data <- data.frame(
+  attr_prob = HR_model$fitted.values,
+  attrition= HRfinaldata$attrition)
+
+predicted_data <- predicted_data[
+  order(predicted_data$attr_prob, decreasing = FALSE),]
+
+predicted_data$rank <- 1:nrow(predicted_data)
+
+ggplot(predicted_data, aes(x=rank, y=attr_prob))+
+  geom_point(aes(color=attrition), alpha=1, shape=4, stroke=1)+
+  xlab("index")+
+  ylab("Predicted Probability of Attrition")+
+  theme_bw()+
+  labs(caption = str_wrap("This graph displays the predicted probabilities that each employee quits along with their actual attrition status. Our model has not done a bad job. Just not great at predicting.", width=50),
+       title = "")+
+  theme(plot.background = element_rect(fill = "gray95"),
+        plot.caption = element_text(hjust = 0.5, vjust = 100,
+                                    color="black", size=12),
+        plot.caption.position = "plot")
+```
+
+
+# 4. **Conclusion and Company Insights** {#4.}
+
+
+## Impact of Overtime on Employee Retention
+
+Our analysis identified overtime as the most significant factor contributing to employee attrition. This finding highlights the need for HR to assess overtime policies and employee workload management.
+
+Key considerations include:
+
+- **Employee Well-being & Work-Life Balance**: Extended work hours contribute to fatigue, stress, and diminished job satisfaction, increasing the likelihood of turnover.
+
+- **Compensation & Fairness**: Are employees receiving appropriate compensation for overtime work? Is overtime equitably distributed among teams?
+
+- **Workload & Project Management**: Are urgent deadlines driving excessive overtime? Adjusting project timelines and increasing staffing levels could mitigate burnout.
+
+To address these concerns, HR may consider conducting employee feedback surveys, reviewing scheduling practices, and assessing hiring needs to create a more sustainable work environment. [Link to Source](https://www.celayix.com/blog/how-excessive-overtime-is-impacting-your-organization/#:~:text=Another%20adverse%20effect%20of%20excessive,likely%20to%20have%20high%20overtime.)
+
+## Reevaluating Business Travel
+
+While business travel can provide opportunities for professional growth and networking, frequent travel is strongly associated with higher attrition rates. Our analysis indicates that employees who travel frequently are 459% more likely to leave the company compared to those who do not travel at all.
+
+Key challenges associated with frequent travel include:
+
+- **Burnout & Stress**: Extended time away from home can lead to exhaustion and decreased job satisfaction.
+
+- **Health & Well-being**: Frequent travel has been linked to higher stress levels and potential long-term health impacts.
+
+- **Work-Life Balance**: Employees with caregiving responsibilities or other personal commitments may find frequent travel disruptive.
+
+HR should work closely with managers to assess the necessity of each trip. In today’s digital environment, virtual meetings and remote collaboration tools can often replace in-person travel while still achieving business objectives. By offering more flexible travel policies, companies can enhance retention and maintain a more engaged workforce.
+
+## The Value of Promoting from Within
+
+A strong promote-from-within culture can significantly enhance employee retention and long-term company success. Organizations that prioritize internal growth create a sense of loyalty, motivation, and career stability among employees.
+
+For example, Publix Supermarkets has successfully implemented this approach, allowing employees to advance from entry-level roles to management. As a result, Publix maintains an annual voluntary attrition rate of just 5%, compared to the 65% industry average in retail. [Link to Source](https://fortune.com/longform/publix-best-companies/)
+
+Beyond retention benefits, internal promotions often align with stock ownership programs and loyalty incentives, which I will expand on in the next section. By investing in career development and providing clear advancement pathways, companies can reduce turnover and build a more engaged, experienced workforce.
+
+## Enhancing Retention Through Loyalty Bonuses
+
+Employees thrive when they feel recognized, valued, and appreciated for their contributions. A well-structured loyalty bonus or stock ownership program can significantly boost morale, engagement, and retention.
+
+Instead of relying solely on small gestures like pizza parties or happy hours, companies should consider meaningful incentives that reflect employees' contributions to business success. For example, Publix Supermarkets is an employee-owned company where team members working over 1,000 hours receive stock valued at an average of 10% of their compensation. This model fosters loyalty, financial investment in the company’s success, and long-term retention.
+
+While salary increases may not always be feasible, alternative recognition programs such as performance-based bonuses, stock options, and milestone celebrations can help reinforce a culture of appreciation and commitment. By implementing these strategies, companies can strengthen employee loyalty and reduce voluntary turnover.
+
+## Improving Work-Life Balance
+
+A supportive work environment is crucial for retaining top talent and maintaining productivity. Our analysis shows that when employees experience greater satisfaction in both their personal and professional lives, their likelihood of quitting or underperforming decreases significantly.
+
+To foster this balance, HR can implement initiatives such as:
+
+- **Flexible Work Arrangements**: Evaluate whether certain roles truly require in-office presence. Offering hybrid or remote options can improve work-life balance, especially for employees with caregiving responsibilities.
+
+- **Commuting Considerations**: Long commutes can reduce overall job satisfaction. Flexible start times or remote work days can help employees better manage family and personal responsibilities.
+
+- **Team-Building & Recognition Events**: Hosting quarterly company outings or morale-boosting activities can strengthen team cohesion and engagement.
+
+By prioritizing employee well-being and flexibility, companies can reduce turnover, improve job satisfaction, and enhance overall performance.   
+
+## Leadership Accountability and Employee Trust
+
+Effective leadership is a key driver of employee satisfaction, performance, and retention. However, for leadership evaluations to be meaningful, employees must feel safe providing honest feedback without fear of repercussions.
+
+To strengthen trust and accountability, HR should consider:
+
+- **Ensuring Anonymity in Employee Surveys**: Employees should feel confident that their feedback is truly anonymous, fostering more accurate and constructive insights.
+
+- **Acting on Feedback Transparently**: Rather than penalizing employees for low ratings, HR should use feedback as an opportunity to support leadership development and team collaboration.
+
+- **Encouraging Constructive Improvement**: Leadership evaluations should prioritize growth, offering managers training, mentorship, and resources to enhance their management skills.
+
+By creating a culture of trust, accountability, and continuous improvement, companies can strengthen leadership effectiveness and employee engagement, ultimately improving overall team success.
