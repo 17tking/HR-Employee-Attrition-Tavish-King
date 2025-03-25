@@ -111,16 +111,6 @@ library(RPostgres)  #to connect to SQL code
 library(DBI)        #connecting to SQL database
 ```
 
-```{r SQL database, include=FALSE}
-# for myself
-con <- dbConnect(Postgres(),
-                 dbname = "HR_Analytics",
-                 host = "localhost",
-                 port = "5432",
-                 user = "postgres",
-                 password = "Ecclesiastes4:8")
-```
-
 ### **Connect to SQL database with R**
 
 ```{r Connecting to SQL database, eval=FALSE}
