@@ -42,4 +42,4 @@ This analysis covers **4** key areas:
 
 -   Wrapping up the project with real-world, real-business strategies on the most influential factors from this analysis to help combat the negative impacts employee attrition can have on a company
 
-# Want to see the full analysis? [Click Here!]()
+# Want to see the full analysis? [Click Here!](https://17tking.github.io/TavishKing.github.io/report/index.html)
